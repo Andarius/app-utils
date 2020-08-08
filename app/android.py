@@ -77,11 +77,12 @@ def fetch_access_token(signed_jwt: str) -> str:
 
 
 def refresh_token():
+    CONSOLE.info('Refreshing token...')
     signed_jwt = _gen_jwt()
     token = fetch_access_token(signed_jwt)
     with open(str(TOKEN_FILE), 'w') as f:
         f.write(token)
-    print('token: ', token)
+    CONSOLE.info('Token refreshed !')
     return token
 
 

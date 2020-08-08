@@ -1,0 +1,11 @@
+name: app-utils
+
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+ - python=3.8
+ - requests=2.24.0
+ - PyJWT=1.7.1
+ - rich=5.0.0

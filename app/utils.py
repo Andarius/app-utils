@@ -10,13 +10,13 @@ class ConsoleLog:
         self.console = Console()
 
     def info(self, *args):
-        self.console.log(f'[{ConsoleLog.INFO}]', *args)
+        self.console.log(ConsoleLog.INFO, *args)
 
     def warn(self, *args):
-        self.console.log(f'[{ConsoleLog.WARNING}]', *args)
+        self.console.log(ConsoleLog.WARNING, *args)
 
     def error(self, *args):
-        self.console.log(f'[{ConsoleLog.ERROR}]', *args)
+        self.console.log(ConsoleLog.ERROR, *args)
 
 
 CONSOLE = ConsoleLog()

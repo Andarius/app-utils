@@ -2,6 +2,7 @@ import argparse
 from pathlib import Path
 import re
 import pprint
+from typing import Union
 
 from .utils import CONSOLE
 
@@ -9,7 +10,8 @@ _version_reg = re.compile(r'^## \[v(?P<version>\d+\.\d+\.\d+)\]$')
 _lang_reg = re.compile(r'- \*\*(?P<lang>\w{2}\-\w{2})\*\*:')
 
 
-def parse_markdown(file: Path):
+def parse_markdown(path: Union[Path, str]):
+    file = path if isinstance(str, Path) else Path(path)
 
     def _reset_lang():
         nonlocal current_lang
@@ -58,7 +60,7 @@ def parse_markdown(file: Path):
 
 
 def main(options):
-    file = Path(options.pop('path'))
+
     data = parse_markdown(file)
 
     pprint.pprint(data)
