@@ -1,8 +1,11 @@
 FROM python:3.8-alpine
 
-RUN apk --no-cache add git && \
+RUN apk --no-cache add git gettext gettext && \
     addgroup user && \
-    adduser -s /bin/bash -D -G user user
+    adduser -s /bin/bash -D -G user user && \
+    cp /usr/bin/envsubst /usr/local/bin/envsubst && \
+    mkdir -p ~/.ssh && \
+    chmod 700 ~/.ssh
 
 WORKDIR /scripts
 
