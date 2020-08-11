@@ -6,11 +6,11 @@ import re
 
 
 def main(options):
-    versions = parse_markdown(options['path'])
+    versions = parse_markdown(options['changelog'])
     project = Path(options['project'])
     build_file = project / 'android' / 'app' / 'build.gradle'
 
-    last_version = versions[0]['version']
+    last_version = versions[0].version
     CONSOLE.info('Last version found: ', last_version)
 
     _major, _minor, _patch = last_version.split('.')
@@ -27,17 +27,21 @@ def main(options):
     build_file.write_text(text)
 
     CONSOLE.info('Build file updated @', build_file)
-    if options['version']:
-        with open(options['version'], 'w') as f:
+    version_file = options.get('version')
+    if version_file:
+        CONSOLE.info('Creating version file @', version_file)
+        with open(version_file, 'w') as f:
             f.write(last_version)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('Update app version in build/gradle file')
-    parser.add_argument('-p', '--path',
+    parser.add_argument('--changelog',
                         help='Changelog path',
-                        required=True)
-    parser.add_argument('--project', help='Path to the RN project', required=True)
+                        default='/project/CHANGELOG.md')
+    parser.add_argument('--project',
+                        default='/project',
+                        help='Path to the RN project')
     parser.add_argument('-v', '--verbose', action='store_true')
     parser.add_argument('--version', help='Path where to store the version built')
 

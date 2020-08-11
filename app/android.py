@@ -7,9 +7,12 @@ from uuid import uuid4
 import pathlib
 import pprint
 import functools
-from typing import Optional
+from typing import Optional, List
+from enum import Enum
+from dataclasses import dataclass
 
 from .utils import CONSOLE
+from .changelog import ReleaseNote, parse_markdown, Release as _Release
 
 # https://developers.google.com/identity/protocols/oauth2/scopes#androidpublisher
 SCOPE = 'https://www.googleapis.com/auth/androidpublisher'
@@ -19,8 +22,52 @@ PRIVATE_KEY_FROM_JSON = None
 
 URL = 'https://www.googleapis.com/androidpublisher/v3/applications/{PACKAGE_NAME}'
 UPLOAD_URL = 'https://www.googleapis.com/upload/androidpublisher/v3/applications/{PACKAGE_NAME}'
-
+COMMIT_URL = 'https://androidpublisher.googleapis.com/androidpublisher/v3/applications/{PACKAGE_NAME}'
 TOKEN_FILE = pathlib.Path.home() / '.android_play_api'
+
+
+class Tracks(Enum):
+    alpha = 'alpha'
+    beta = 'beta'
+    internal = 'internal'
+    production = 'production'
+
+
+class Status(Enum):
+    unspecified = 'STATUS_UNSPECIFIED'
+    draft = 'DRAFT'
+    in_progress = 'IN_PROGRESS'
+    halted = 'HALTED'
+    completed = 'completed'
+
+
+@dataclass
+class Release:
+    track: Tracks
+    release: _Release
+    status: Status = Status.completed
+
+    @property
+    def data(self):
+        data = {
+            "track": self.track.value,
+            "releases": [
+                {
+                    # "name": VERSION_NAME,
+                    "versionCodes": self.release.version_code,
+                    "userFraction": 1 if self.status != Status.completed else None,
+                    "countryTargeting": {
+                        "countries": [
+                            'France'
+                        ],
+                        "includeRestOfWorld": False
+                    },
+                    "releaseNotes": [x.data for x in self.release.release_notes],
+                    "status": self.status.value
+                }
+            ]
+        }
+        return data
 
 
 def _get_auth_header(token: str) -> dict:
@@ -107,24 +154,64 @@ def fetch_upload_bundle(session: requests.Session,
     return resp
 
 
-def upload_bundle(session: requests.Session, path: str, edit_id: str = None):
+@retry_refresh_token()
+def fetch_patch_release(session: requests.Session, edit_id: str, release: Release):
+    resp = session.put(f'{URL}/edits/{edit_id}/tracks/{release.track.value}',
+                       json=release.data)
+    return resp
+
+
+@retry_refresh_token()
+def fetch_commit(session: requests.Session, edit_id: str):
+    resp = session.post(f'{COMMIT_URL}/edits/{edit_id}:commit')
+    return resp
+
+
+def upload_bundle(session: requests.Session, path: str,
+                  changelog: str,
+                  track: str,
+                  edit_id: str = None,
+                  no_upload: bool = False):
+    releases = parse_markdown(changelog)
+    track = Tracks[track]
+    last_release = releases[0]
+
+    CONSOLE.info(f'Starting bundle upload edit (version: {last_release.version}), track: {track.value}')
+
     if not edit_id:
         resp = fetch_insert_edit(session, 30)
         resp = resp.json()
         edit_id = resp['id']
         CONSOLE.info('Edit created with id ', edit_id)
 
-    CONSOLE.info(f'Starting upload of {path} ...')
-    resp = fetch_upload_bundle(session, edit_id, path)
+    if not no_upload:
+        CONSOLE.info(f'Starting upload of {path} ...')
+        resp = fetch_upload_bundle(session, edit_id, path)
+        data = resp.json()
+        if resp.status_code != 200:
+            CONSOLE.error(data['error']['message'], f' (status: {resp.status_code})')
+            return
+
+        print('Uploaded version: {versionCode}'.format(**data))
+
+    release = Release(track, last_release)
+    resp = fetch_patch_release(session, edit_id, release)
     data = resp.json()
     if resp.status_code != 200:
         CONSOLE.error(data['error']['message'], f' (status: {resp.status_code})')
+        return
+
+    resp = fetch_commit(session, edit_id)
+    print(resp.status_code)
+    data = resp.json()
+    pprint.pprint(data)
 
 
 def _load_config(package_name, config_path) -> Optional[str]:
-    global URL, PRIVATE_KEY_FROM_JSON, PRIVATE_KEY_ID_FROM_JSON, CLIENT_EMAIL, UPLOAD_URL
+    global URL, PRIVATE_KEY_FROM_JSON, PRIVATE_KEY_ID_FROM_JSON, CLIENT_EMAIL, UPLOAD_URL, COMMIT_URL
     URL = URL.format(PACKAGE_NAME=package_name)
     UPLOAD_URL = UPLOAD_URL.format(PACKAGE_NAME=package_name)
+    COMMIT_URL = COMMIT_URL.format(PACKAGE_NAME=package_name)
 
     if config_path:
         with open(config_path, 'r') as f:
@@ -172,6 +259,10 @@ if __name__ == '__main__':
     Edit ID for the upload, if not specified, a new one will be generated
     """)
     upload_parser.add_argument('-p', '--path', help='Path to the bundle to upload',
+                               required=True)
+    upload_parser.add_argument('--no-upload', action='store_true', help='Skips the bundle upload')
+    upload_parser.add_argument('--changelog', help='Path to the CHANGELOG file', required=True)
+    upload_parser.add_argument('--track', help='Track to upload to', choices=[x.value for x in Tracks],
                                required=True)
     upload_parser.set_defaults(func=upload_bundle)
 
