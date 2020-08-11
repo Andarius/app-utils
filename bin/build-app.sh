@@ -31,7 +31,6 @@ setup_clean_repo(){
     yarn install
 }
 
-
 if [[ "$1" = "android" ]]; then
     echo "Building android"
     echo "${ANDROID_PATH}"

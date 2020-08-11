@@ -26,5 +26,5 @@ ENV PATH "$PATH:/scripts/bin"
 
 USER user
 
-ENTRYPOINT ["upload-android.sh"]
+#ENTRYPOINT ["upload-android.sh"]
 #CMD ["android"]
