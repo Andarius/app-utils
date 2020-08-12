@@ -214,7 +214,7 @@ def upload_bundle(session: requests.Session, path: str,
     if resp.status_code != 200:
         raise UploadFailedException(data['error']['message'], resp.status_code)
 
-   
+
 def _load_config(package_name, config_path) -> Optional[str]:
     global URL, PRIVATE_KEY_FROM_JSON, PRIVATE_KEY_ID_FROM_JSON, CLIENT_EMAIL, UPLOAD_URL, COMMIT_URL
     URL = URL.format(PACKAGE_NAME=package_name)

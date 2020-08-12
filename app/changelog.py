@@ -22,8 +22,9 @@ class ReleaseNote:
     def html_text(self):
         text = self.text
         matches = [x.strip() for x in _header_reg.findall(self.text)]
+        print(matches)
         for match in matches:
-            text = self.text.replace(match, f'<b>{match}</b>').replace('### ', '')
+            text = text.replace(match, f'<b>{match}</b>').replace('### ', '')
         return text
 
     @property
@@ -106,6 +107,8 @@ def main(options):
     if options['last']:
         print('version:', data[0].version)
         print('version_code:', data[0].version_code)
+    else:
+        print(data[0].release_notes[0].html_text)
 
 
 if __name__ == '__main__':
