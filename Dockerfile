@@ -4,8 +4,8 @@ RUN apk --no-cache add git gettext openssh && \
     addgroup user && \
     adduser -s /bin/bash -D -G user user && \
     cp /usr/bin/envsubst /usr/local/bin/envsubst && \
-    mkdir -p ~/.ssh && \
-    chmod 700 ~/.ssh
+    mkdir -p /home/user/.ssh && \
+    chmod 700 /home/user/.ssh
 
 WORKDIR /scripts
 
