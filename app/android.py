@@ -1,3 +1,4 @@
+import sys
 import requests
 import jwt
 import time
@@ -24,6 +25,12 @@ URL = 'https://www.googleapis.com/androidpublisher/v3/applications/{PACKAGE_NAME
 UPLOAD_URL = 'https://www.googleapis.com/upload/androidpublisher/v3/applications/{PACKAGE_NAME}'
 COMMIT_URL = 'https://androidpublisher.googleapis.com/androidpublisher/v3/applications/{PACKAGE_NAME}'
 TOKEN_FILE = pathlib.Path.home() / '.android_play_api'
+
+
+class UploadFailedException(Exception):
+    def __init__(self, msg: str, status_code: int):
+        self.message = msg
+        self.status_code = status_code
 
 
 class Tracks(Enum):
@@ -189,8 +196,8 @@ def upload_bundle(session: requests.Session, path: str,
         resp = fetch_upload_bundle(session, edit_id, path)
         data = resp.json()
         if resp.status_code != 200:
-            CONSOLE.error(data['error']['message'], f' (status: {resp.status_code})')
-            return
+            # CONSOLE.error(data['error']['message'], f' (status: {resp.status_code})')
+            raise UploadFailedException(data['error']['message'], resp.status_code)
 
         print('Uploaded version: {versionCode}'.format(**data))
 
@@ -198,11 +205,14 @@ def upload_bundle(session: requests.Session, path: str,
     resp = fetch_patch_release(session, edit_id, release)
     data = resp.json()
     if resp.status_code != 200:
-        CONSOLE.error(data['error']['message'], f' (status: {resp.status_code})')
-        return
+        # CONSOLE.error(data['error']['message'], f' (status: {resp.status_code})')
+        raise UploadFailedException(data['error']['message'], resp.status_code)
 
     resp = fetch_commit(session, edit_id)
-    print(resp.status_code)
+    if resp.status_code != 200:
+        # CONSOLE.error(data['error']['message'], f' (status: {resp.status_code})')
+        raise UploadFailedException(data['error']['message'], resp.status_code)
+
     data = resp.json()
     pprint.pprint(data)
 
@@ -242,7 +252,11 @@ def main(options: dict):
     if token:
         session.headers.update(_get_auth_header(token))
 
-    func(session=session, **options)
+    try:
+        func(session=session, **options)
+    except UploadFailedException as e:
+        CONSOLE.error(f'Upload failed. {e.message} (code: {e.status_code})')
+        sys.exit(-1)
 
 
 if __name__ == '__main__':
