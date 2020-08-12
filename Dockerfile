@@ -1,6 +1,6 @@
 FROM python:3.8-alpine
 
-RUN apk --no-cache add git gettext openssh libssl && \
+RUN apk --no-cache add git gettext openssh libressl && \
     addgroup user && \
     adduser -s /bin/bash -D -G user user && \
     cp /usr/bin/envsubst /usr/local/bin/envsubst
