@@ -5,7 +5,8 @@ RUN apk --no-cache add git gettext openssh && \
     adduser -s /bin/bash -D -G user user && \
     cp /usr/bin/envsubst /usr/local/bin/envsubst && \
     mkdir -p /home/user/.ssh && \
-    chmod 700 /home/user/.ssh
+    chmod 700 /home/user/.ssh && \
+    touch /home/user/.ssh/known_hosts && chmod 644  /home/user/.ssh/known_hosts
 
 WORKDIR /scripts
 
