@@ -196,7 +196,6 @@ def upload_bundle(session: requests.Session, path: str,
         resp = fetch_upload_bundle(session, edit_id, path)
         data = resp.json()
         if resp.status_code != 200:
-            # CONSOLE.error(data['error']['message'], f' (status: {resp.status_code})')
             raise UploadFailedException(data['error']['message'], resp.status_code)
 
         print('Uploaded version: {versionCode}'.format(**data))
@@ -205,18 +204,17 @@ def upload_bundle(session: requests.Session, path: str,
     resp = fetch_patch_release(session, edit_id, release)
     data = resp.json()
     if resp.status_code != 200:
-        # CONSOLE.error(data['error']['message'], f' (status: {resp.status_code})')
         raise UploadFailedException(data['error']['message'], resp.status_code)
 
     resp = fetch_commit(session, edit_id)
-    if resp.status_code != 200:
-        # CONSOLE.error(data['error']['message'], f' (status: {resp.status_code})')
-        raise UploadFailedException(data['error']['message'], resp.status_code)
-
     data = resp.json()
+
     pprint.pprint(data)
 
+    if resp.status_code != 200:
+        raise UploadFailedException(data['error']['message'], resp.status_code)
 
+   
 def _load_config(package_name, config_path) -> Optional[str]:
     global URL, PRIVATE_KEY_FROM_JSON, PRIVATE_KEY_ID_FROM_JSON, CLIENT_EMAIL, UPLOAD_URL, COMMIT_URL
     URL = URL.format(PACKAGE_NAME=package_name)
