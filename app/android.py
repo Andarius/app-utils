@@ -198,7 +198,7 @@ def upload_bundle(session: requests.Session, path: str,
         if resp.status_code != 200:
             raise UploadFailedException(data['error']['message'], resp.status_code)
 
-        print('Uploaded version: {versionCode}'.format(**data))
+        CONSOLE.info('Uploaded version: {versionCode}'.format(**data))
 
     release = Release(track, last_release)
     resp = fetch_patch_release(session, edit_id, release)
@@ -209,10 +209,10 @@ def upload_bundle(session: requests.Session, path: str,
     resp = fetch_commit(session, edit_id)
     data = resp.json()
 
-    pprint.pprint(data)
-
     if resp.status_code != 200:
         raise UploadFailedException(data['error']['message'], resp.status_code)
+
+    CONSOLE.info(f'Release sent ! ({data})')
 
 
 def _load_config(package_name, config_path) -> Optional[str]:
