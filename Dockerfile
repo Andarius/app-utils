@@ -1,9 +1,11 @@
 FROM python:3.8-alpine
 
-RUN apk --no-cache add git gettext openssh libressl && \
+RUN apk --no-cache add git gettext openssh libressl coreutils && \
     addgroup user && \
     adduser -s /bin/bash -D -G user user && \
-    cp /usr/bin/envsubst /usr/local/bin/envsubst
+    cp /usr/bin/envsubst /usr/local/bin/envsubst && \
+    cp /usr/bin/tee /usr/local/bin/tee
+
 WORKDIR /scripts
 
 ADD requirements.txt .
