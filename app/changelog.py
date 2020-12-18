@@ -22,7 +22,7 @@ class ReleaseNote:
     def html_text(self):
         text = self.text
         matches = [x.strip() for x in _header_reg.findall(self.text)]
-        print(matches)
+
         for match in matches:
             text = text.replace(match, f'<b>{match}</b>').replace('### ', '')
         return text
@@ -80,7 +80,6 @@ def parse_markdown(path: Union[Path, str]) -> List[Release]:
     for l in lines:
         if l.startswith('## '):
             _reset()
-
             version = _version_reg.match(l)
             current_version['version'] = version.group('version')
             current_version['languages'] = []
