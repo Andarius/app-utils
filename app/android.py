@@ -6,14 +6,14 @@ import json
 import argparse
 from uuid import uuid4
 import pathlib
-import pprint
 import functools
-from typing import Optional, List
+from typing import Optional
 from enum import Enum
 from dataclasses import dataclass
+import logging
+from .logs import logger, init_logging
 
-from .utils import CONSOLE
-from .changelog import ReleaseNote, parse_markdown, Release as _Release
+from .changelog import parse_markdown, Release as _Release
 
 # https://developers.google.com/identity/protocols/oauth2/scopes#androidpublisher
 SCOPE = 'https://www.googleapis.com/auth/androidpublisher'
@@ -131,12 +131,12 @@ def fetch_access_token(signed_jwt: str) -> str:
 
 
 def refresh_token():
-    CONSOLE.info('Refreshing token...')
+    logger.info('Refreshing token...')
     signed_jwt = _gen_jwt()
     token = fetch_access_token(signed_jwt)
     with open(str(TOKEN_FILE), 'w') as f:
         f.write(token)
-    CONSOLE.info('Token refreshed !')
+    logger.info('Token refreshed !')
     return token
 
 
@@ -183,22 +183,22 @@ def upload_bundle(session: requests.Session, path: str,
     track = Tracks[track]
     last_release = releases[0]
 
-    CONSOLE.info(f'Starting bundle upload edit (version: {last_release.version}), track: {track.value}')
+    logger.info(f'Starting bundle upload edit (version: {last_release.version}), track: {track.value}')
 
     if not edit_id:
         resp = fetch_insert_edit(session, 30)
         resp = resp.json()
         edit_id = resp['id']
-        CONSOLE.info('Edit created with id ', edit_id)
+        logger.info('Edit created with id ', edit_id)
 
     if not no_upload:
-        CONSOLE.info(f'Starting upload of {path} ...')
+        logger.info(f'Starting upload of {path} ...')
         resp = fetch_upload_bundle(session, edit_id, path)
         data = resp.json()
         if resp.status_code != 200:
             raise UploadFailedException(data['error']['message'], resp.status_code)
 
-        CONSOLE.info('Uploaded version: {versionCode}'.format(**data))
+        logger.info('Uploaded version: {versionCode}'.format(**data))
 
     release = Release(track, last_release)
     resp = fetch_patch_release(session, edit_id, release)
@@ -212,7 +212,7 @@ def upload_bundle(session: requests.Session, path: str,
     if resp.status_code != 200:
         raise UploadFailedException(data['error']['message'], resp.status_code)
 
-    CONSOLE.info(f'Release sent ! ({data})')
+    logger.info(f'Release sent ! ({data})')
 
 
 def _load_config(package_name, config_path) -> Optional[str]:
@@ -238,10 +238,9 @@ def _load_config(package_name, config_path) -> Optional[str]:
 
 
 def main(options: dict):
-    verbose = options.pop('verbose', None)
     func = options.pop('func', None)
     if not func:
-        CONSOLE.warn('Nothing to do')
+        logger.warn('Nothing to do')
         return
     token = _load_config(options.pop('package'),
                          options.pop('config', None))
@@ -253,7 +252,7 @@ def main(options: dict):
     try:
         func(session=session, **options)
     except UploadFailedException as e:
-        CONSOLE.error(f'Upload failed. {e.message} (code: {e.status_code})')
+        logger.error(f'Upload failed. {e.message} (code: {e.status_code})')
         sys.exit(-1)
 
 
@@ -279,4 +278,5 @@ if __name__ == '__main__':
     upload_parser.set_defaults(func=upload_bundle)
 
     options = parser.parse_args()
+    init_logging(log_lvl=logging.INFO if options.verbose else logging.WARNING)
     main(vars(options))

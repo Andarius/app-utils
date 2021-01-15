@@ -1,11 +1,9 @@
 import argparse
 from pathlib import Path
 import re
-import pprint
 from typing import Union, List
 from dataclasses import dataclass, asdict
 
-from .utils import CONSOLE
 
 _version_reg = re.compile(r'^## \[v(?P<version>\d+\.\d+\.\d+)\]$')
 _lang_reg = re.compile(r'- \*\*(?P<lang>\w{2}\-\w{2})\*\*:')
@@ -38,7 +36,7 @@ class ReleaseNote:
 @dataclass
 class Release:
     version: str
-    release_notes: List[ReleaseNote]
+    release_notes: List[Union[ReleaseNote, dict]]
 
     @property
     def version_code(self) -> int:
@@ -48,6 +46,11 @@ class Release:
     @property
     def data(self):
         return asdict(self)
+
+    def __post_init__(self):
+        self.release_notes = [ReleaseNote(**x)
+                              if isinstance(x, dict) else x
+                              for x in self.release_notes]
 
 
 def parse_markdown(path: Union[Path, str]) -> List[Release]:
