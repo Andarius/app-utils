@@ -178,7 +178,8 @@ def upload_bundle(session: requests.Session, path: str,
                   changelog: str,
                   track: str,
                   edit_id: str = None,
-                  no_upload: bool = False):
+                  no_upload: bool = False,
+                  **kwargs):
     releases = parse_markdown(changelog)
     track = Tracks[track]
     last_release = releases[0]
