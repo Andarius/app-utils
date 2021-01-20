@@ -1,10 +1,8 @@
 import pytest
-import os
-from pathlib import Path
-import pprint
+from .conftest import DATA_FOLDER
 from dataclasses import asdict
 
-DATA_FOLDER = Path(os.path.dirname(__file__)) / 'data'
+
 
 
 @pytest.mark.parametrize('path', [

@@ -3,6 +3,7 @@ from pathlib import Path
 import re
 from typing import Union, List
 from dataclasses import dataclass, asdict
+from .logs import logger
 
 
 _version_reg = re.compile(r'^## \[v(?P<version>\d+\.\d+\.\d+)\]$')
@@ -71,7 +72,7 @@ def parse_markdown(path: Union[Path, str]) -> List[Release]:
             current_version = {}
 
     if not file.exists():
-        CONSOLE.error(f'No file found @ {file}')
+        logger.error(f'No file found @ {file}')
 
     with open(file, 'r') as f:
         lines = [x.strip() for x in f.readlines() if x.strip()]
