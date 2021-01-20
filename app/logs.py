@@ -8,9 +8,9 @@ logger = logging.getLogger('app-utils')
 _LOG_FORMAT = "[%(filename)s] %(message)s"
 
 
-def init_logging(logs_path='/logs',
+def init_logging(logs_path=None,
                  log_lvl=logging.INFO):
-    fh = logging.FileHandler(Path(logs_path) / 'logs.log') if logs_path else None
+    fh = logging.FileHandler(logs_path if logs_path else None)
     logging.basicConfig(
         level=log_lvl.upper() if isinstance(log_lvl, str) else log_lvl,
         # format=_LOG_FORMAT,
