@@ -16,7 +16,7 @@ def tmp_folder():
 
     yield TMP_FILES_FOLDER
 
-    # shutil.rmtree(TMP_FILES_FOLDER)
+    shutil.rmtree(TMP_FILES_FOLDER)
 
 
 @pytest.fixture(scope='function')
