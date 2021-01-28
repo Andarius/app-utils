@@ -11,6 +11,7 @@ from typing import Optional
 from enum import Enum
 from dataclasses import dataclass
 import logging
+from json import JSONDecodeError
 from .logs import logger, init_logging
 
 from .changelog import parse_markdown, Release as _Release
@@ -208,7 +209,11 @@ def upload_bundle(session: requests.Session, path: str,
         raise UploadFailedException(data['error']['message'], resp.status_code)
 
     resp = fetch_commit(session, edit_id)
-    data = resp.json()
+    try:
+        data = resp.json()
+    except JSONDecodeError:
+        logger.error(resp.text)
+        raise
 
     if resp.status_code != 200:
         raise UploadFailedException(data['error']['message'], resp.status_code)
