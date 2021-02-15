@@ -57,6 +57,12 @@ class Release:
 
     @property
     def data(self):
+        country_targeting = {
+            "countries": [
+                'France'
+            ],
+            "includeRestOfWorld": False
+        } if self.track != self.track.internal else None
         data = {
             "track": self.track.value,
             "releases": [
@@ -64,12 +70,7 @@ class Release:
                     # "name": VERSION_NAME,
                     "versionCodes": self.release.version_code,
                     "userFraction": 1 if self.status != Status.completed else None,
-                    "countryTargeting": {
-                        "countries": [
-                            'France'
-                        ],
-                        "includeRestOfWorld": False
-                    },
+                    "countryTargeting": country_targeting,
                     "releaseNotes": [x.data for x in self.release.release_notes],
                     "status": self.status.value
                 }

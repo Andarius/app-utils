@@ -30,9 +30,6 @@ parser.add_argument('-b', '--bottom', type=int,
 parser.add_argument('--dim', type=str, required=True, help='Images dimensions of the form WxH')
 
 
-
-
-
 def crop_image(input_path, output_path, crop_dim):
     process = subprocess.Popen(['convert', input_path, '-crop', crop_dim, output_path],
                                stdout=subprocess.PIPE,

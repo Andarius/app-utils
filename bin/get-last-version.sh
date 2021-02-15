@@ -5,5 +5,5 @@
 #
 
 
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit
 python -m app.changelog  --last -p "${@}"
