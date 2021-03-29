@@ -10,7 +10,7 @@ WORKDIR /scripts
 
 ADD requirements.txt .
 
-RUN  apk --no-cache add --virtual build-dependencies gcc make make musl-dev libffi-dev libressl-dev && \
+RUN  apk --no-cache add --virtual build-dependencies gcc make make musl-dev libffi-dev libressl-dev cargo && \
      pip install -r requirements.txt && \
      apk del build-dependencies && \
      rm requirements.txt
@@ -18,6 +18,8 @@ RUN  apk --no-cache add --virtual build-dependencies gcc make make musl-dev libf
 RUN mkdir /build /usr/host-bin && chown -R user:user /scripts /tmp /home/user
 
 ADD update_version.py .
+#ADD icons.py .
+#ADD crop.py .
 ADD app/* app/
 ADD bin bin/
 

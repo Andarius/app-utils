@@ -11,7 +11,6 @@ from dataclasses import asdict
 def test_parse_markdown(path):
     from app.changelog import parse_markdown
     results = parse_markdown(path)
-
     assert [asdict(x) for x in results] == [
         {'release_notes': [{'language': 'fr-FR',
                             'text': '### 🐛 Bugs réparés\n'
@@ -26,7 +25,7 @@ def test_parse_markdown(path):
                             'text': '### 🐛 Bug fixed\n- Bug during session creation'}],
          'version': '0.4.22'},
         {'release_notes': [{'language': 'fr-FR',
-                            'text': '### 🔥 Nouveautés\n'
+                            'text': '### Nouveautés\n'
                                     "- Possibilité de voir et d'utiliser les "
                                     'exercices de ses amis'},
                            {'language': 'en-US',

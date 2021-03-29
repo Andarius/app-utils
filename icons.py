@@ -1,7 +1,6 @@
 import argparse
 import cairosvg
 from pathlib import Path
-from app.utils import CONSOLE
 from collections import namedtuple
 
 Sizes = namedtuple('Sizes', ['size', 'formats'])
@@ -23,13 +22,13 @@ def main(options):
     output_path = Path(options.output)
 
     for file in files:
-        CONSOLE.info(file)
+        print(file)
         for ext, _default_size in _DEFAULT_SIZES.items():
             for _format in _default_size.formats:
                 _file_ext = (f'@{_format}x' if _format > 1 else '') + ext
                 _output_file = file.name.replace(file.suffix, '') + _file_ext + '.png'
                 output_size = _default_size.size * _format
-                CONSOLE.info(f'\tsize: {output_size:<4} | ext: {_file_ext}')
+                print(f'\tsize: {output_size:<4} | ext: {_file_ext}')
                 cairosvg.svg2png(url=str(file),
                                  output_height=output_size,
                                  output_width=output_size,
@@ -37,5 +36,6 @@ def main(options):
 
 
 if __name__ == "__main__":
+    from rich import print
     args = parser.parse_args()
     main(args)

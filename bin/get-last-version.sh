@@ -4,6 +4,6 @@
 # ./bin/get-last-version.sh ~/Projects/obiapp/CHANGELOG.md
 #
 
-
 cd "$(dirname "$0")/.." || exit
-python -m app.changelog  --last -p "${@}"
+
+python -m app.changelog -p "${@}" --last

@@ -6,10 +6,12 @@ from dataclasses import dataclass, asdict
 from .logs import logger
 
 
-_version_reg = re.compile(r'^## \[v(?P<version>\d+\.\d+\.\d+)\]$')
-_lang_reg = re.compile(r'- \*\*(?P<lang>\w{2}\-\w{2})\*\*:')
+_version_reg = re.compile(r'^##\s+\[v(?P<version>\d+\.\d+\.\d+)\]$')
+_lang_reg = re.compile(r'-\s+\*\*(?P<lang>\w{2}\-\w{2})\*\*:')
 
-_header_reg = re.compile(r'###\s?.\s?(?P<header>[\w\s]+)')
+_header_reg = re.compile(r'###\s+[^\w]*\s*(?P<header>[\w\s]+)',
+                         flags=re.UNICODE)
+_remove_extra_spaces_reg = re.compile(r'\s{2,}')
 
 
 @dataclass
@@ -21,7 +23,6 @@ class ReleaseNote:
     def html_text(self):
         text = self.text
         matches = [x.strip() for x in _header_reg.findall(self.text)]
-
         for match in matches:
             text = text.replace(match, f'<b>{match}</b>').replace('### ', '')
         return text
@@ -95,7 +96,7 @@ def parse_markdown(path: Union[Path, str]) -> List[Release]:
                 _reset_lang()
                 current_lang = {'lang': lang.group('lang'), 'lines': []}
             elif current_lang:
-                current_lang['lines'].append(l)
+                current_lang['lines'].append(_remove_extra_spaces_reg.sub(' ', l))
 
     _reset()
 
@@ -105,22 +106,46 @@ def parse_markdown(path: Union[Path, str]) -> List[Release]:
             for x in versions]
 
 
-def main(options):
-    data = parse_markdown(options['path'])
-    if options['last']:
-        print('version:', data[0].version)
-        print('version_code:', data[0].version_code)
+
+def print_release_infos(release: Release):
+    print('[bold]version:[/bold]', release.version)
+    print('[bold]version_code:[/bold]', release.version_code)
+    if release.release_notes:
+        for notes in release.release_notes:
+            print(f'<{notes.language}>')
+            print(notes.html_text)
+            print(f'</{notes.language}>')
     else:
-        print(data[0].release_notes[0].html_text)
+        print('No release notes')
+
+
+def main(options):
+    releases = parse_markdown(options['path'])
+    if options['last']:
+        print_release_infos(releases[0])
+    elif options['all_releases']:
+        for release in releases:
+            print(release.version)
+    elif options['release']:
+        release = [x for x in releases if x.version == options['release']]
+        if release:
+            print_release_infos(release[0])
+        else:
+            print('[red]release not found[/red]')
+    else:
+        print('[red]Nothing to do[/red]')
 
 
 if __name__ == '__main__':
+    from rich import print
     parser = argparse.ArgumentParser('Changelog parser')
     parser.add_argument('-p', '--path',
                         help='Changelog path',
                         required=True)
     parser.add_argument('-v', '--verbose', action='store_true')
-    parser.add_argument('--last', action='store_true', help='Will print the last version')
+    parser.add_argument('-r', '--release', help='Will print the corresponding release infos')
+    parser.add_argument('-a', '--all-releases', action='store_true', help='Will print all available releases')
+    parser.add_argument('-l', '--last', action='store_true', help='Will print the last version')
 
     options = parser.parse_args()
     main(vars(options))

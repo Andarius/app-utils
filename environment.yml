@@ -8,7 +8,7 @@ dependencies:
  - python=3.8
  - requests=2.24.0
  - PyJWT=1.7.1
- - rich=5.0.0
- - cairosvg=1.16.0
+ - rich=10.0.0
+ - cairosvg=2.5.2
  # Tests
  - pytest=6.2.1
