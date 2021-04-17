@@ -106,7 +106,6 @@ def parse_markdown(path: Union[Path, str]) -> List[Release]:
             for x in versions]
 
 
-
 def print_release_infos(release: Release):
     print('[bold]version:[/bold]', release.version)
     print('[bold]version_code:[/bold]', release.version_code)
