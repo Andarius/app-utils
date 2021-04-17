@@ -21,6 +21,6 @@ def tmp_folder():
 
 @pytest.fixture(scope='function')
 def project_path(tmp_folder):
-    path = tmp_folder / 'my-project'
-    shutil.copytree(DATA_FOLDER / 'my-project', path)
+    path = tmp_folder / 'myApp'
+    shutil.copytree(DATA_FOLDER / 'myApp', path)
     yield path
