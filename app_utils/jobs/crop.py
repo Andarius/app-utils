@@ -39,8 +39,8 @@ def run_crop(
         shutil.rmtree(output_folder)
     output_folder.mkdir(exist_ok=False)
 
-    _width, _heigth = image_dim.split('x')
-    crop_dim = f'{_width}x{int(_heigth) - from_bottom - from_top}+0+{from_top}'
+    _width, _height = image_dim.split('x')
+    crop_dim = f'{_width}x{int(_height) - from_bottom - from_top}+0+{from_top}'
 
     for ext in extensions:
         for p in folder.glob(f'**/*.{ext}'):

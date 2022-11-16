@@ -36,9 +36,14 @@ def test_update_version_ios(tmp_path, project_path):
     with open(project_path / 'ios' / 'myApp.xcodeproj' / 'project.pbxproj', 'r') as f:
         lines = [x.strip() for i, x in enumerate(f.readlines())]
 
-    assert lines[492] == lines[518] == 'MARKETING_VERSION = 0.4.23;'
-    assert lines[485] == lines[512] == 'CURRENT_PROJECT_VERSION = 4023;'
+    marketing_lines = [x for x in lines if 'MARKETING_VERSION' in x]
+    assert marketing_lines
+    for _marketing_line in marketing_lines:
+        assert _marketing_line == 'MARKETING_VERSION = 0.4.23;'
 
-    with open(tmp_path / 'version', 'r') as f:
-        version = f.read()
-    assert version == '0.4.23'
+    curr_prj_lines = [x for x in lines if 'CURRENT_PROJECT_VERSION' in x]
+    assert curr_prj_lines
+    for _curr_prj_line in curr_prj_lines:
+        assert _curr_prj_line == 'CURRENT_PROJECT_VERSION = 4023;'
+
+    assert (tmp_path / 'version').read_text() == '0.4.23'

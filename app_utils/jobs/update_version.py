@@ -34,6 +34,10 @@ def update_android_version(project: Path, versions: list[Release],
         output_version.write_text(last_version)
 
 
+_MARKET_VERSION_REG = re.compile(r'(MARKETING_VERSION) = \d+\.\d+(\.\d+)?;')
+_CURRENT_PROJECT_VERSION_REG = re.compile(r'(CURRENT_PROJECT_VERSION) = \d+;')
+
+
 def update_ios_version(project: Path,
                        releases: list[Release],
                        output_version: Path | None = None):
@@ -43,8 +47,14 @@ def update_ios_version(project: Path,
 
     _major, _minor, _patch = last_release.version.split('.')
     text = pbxproj_path.read_text()
-    text = re.sub(r'(MARKETING_VERSION) = \d+\.\d+(\.\d+)?;', fr'\1 = {_major}.{_minor}.{_patch};', text)
-    text = re.sub(r'(CURRENT_PROJECT_VERSION) = \d+;', fr'\1 = {last_release.version_code};', text)
+
+    if not _MARKET_VERSION_REG.findall(text):
+        raise NotImplementedError(f'Could not find MARKETING_VERSION in {pbxproj_path!r}')
+    text = _MARKET_VERSION_REG.sub(fr'\1 = {_major}.{_minor}.{_patch};', text)
+
+    if not _CURRENT_PROJECT_VERSION_REG.findall(text):
+        raise NotImplementedError(f'Could not find CURRENT_PROJECT_VERSION in {pbxproj_path!r}')
+    text = _CURRENT_PROJECT_VERSION_REG.sub(fr'\1 = {last_release.version_code};', text)
 
     pbxproj_path.write_text(text)
     logger.info(f'Project.pbxproj updated @{pbxproj_path}')

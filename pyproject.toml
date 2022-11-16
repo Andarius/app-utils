@@ -22,7 +22,7 @@ requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
-addopts = "--cov=api -s -q -x --no-cov-on-fail"
+addopts = "--cov=app_utils -s -q -x --no-cov-on-fail"
 testpaths = [
     "tests"
 ]

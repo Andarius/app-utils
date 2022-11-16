@@ -3,11 +3,6 @@ version: 2.1
 orbs:
   gh: circleci/github-cli@1.0
 
-references:
-  pypi_context: &pypi_context
-    - pypi
-    - github
-
 
 executors:
   test-build:
@@ -48,7 +43,7 @@ jobs:
           path: htmlcov
 
   bump-version:
-    executor: build
+    executor: test-build
     steps:
       - gh/setup
       - checkout
@@ -80,7 +75,6 @@ workflows:
             tags:
               ignore: /.*/
       - bump-version:
-          context: *pypi_context
           requires: [ run-tests ]
           filters:
             tags:
