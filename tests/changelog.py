@@ -1,15 +1,15 @@
-import pytest
-from .conftest import DATA_FOLDER
 from dataclasses import asdict
 
+import pytest
 
+from .conftest import DATA_FOLDER
 
 
 @pytest.mark.parametrize('path', [
     DATA_FOLDER / 'CHANGELOG.md'
 ])
 def test_parse_markdown(path):
-    from app.changelog import parse_markdown
+    from app_utils.jobs.changelog import parse_markdown
     results = parse_markdown(path)
     assert [asdict(x) for x in results] == [
         {'release_notes': [{'language': 'fr-FR',
@@ -36,11 +36,12 @@ def test_parse_markdown(path):
 
 
 @pytest.mark.parametrize('data, expected', [
-    ({'version': '4.0.1', 'release_notes': [{'language': 'FR-fr', 'text': '### 🐛 Bug fixed\n- Bug during session update'}]},
+    ({'version': '4.0.1',
+      'release_notes': [{'language': 'FR-fr', 'text': '### 🐛 Bug fixed\n- Bug during session update'}]},
      {'version_code': 4000001, 'html': "🐛 <b>Bug fixed</b>\n- Bug during session update"})
 ])
 def test_release(data, expected):
-    from app.changelog import Release
+    from app_utils.jobs.changelog import Release
     release = Release(**data)
     assert release.version_code == expected['version_code']
     assert release.release_notes[0].html_text == expected['html']

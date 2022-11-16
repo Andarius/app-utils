@@ -1,20 +1,21 @@
-import sys
-import requests
-import jwt
-import time
-import json
-import argparse
-from uuid import uuid4
-import pathlib
 import functools
-from typing import Optional
-from enum import Enum
+import json
+import time
 from dataclasses import dataclass
-import logging
+from enum import Enum
 from json import JSONDecodeError
-from .logs import logger, init_logging
+from pathlib import Path
+from typing import Callable, ParamSpec, Concatenate
+from uuid import uuid4
 
-from .changelog import parse_markdown, Release as _Release
+import httpx
+import jwt
+from httpx import codes
+
+from app_utils.jobs.changelog import parse_markdown, Release as _Release
+from app_utils.logs import logger
+
+TOKEN_FILE = Path.home() / '.android_play_api'
 
 # https://developers.google.com/identity/protocols/oauth2/scopes#androidpublisher
 SCOPE = 'https://www.googleapis.com/auth/androidpublisher'
@@ -25,7 +26,6 @@ PRIVATE_KEY_FROM_JSON = None
 URL = 'https://www.googleapis.com/androidpublisher/v3/applications/{PACKAGE_NAME}'
 UPLOAD_URL = 'https://www.googleapis.com/upload/androidpublisher/v3/applications/{PACKAGE_NAME}'
 COMMIT_URL = 'https://androidpublisher.googleapis.com/androidpublisher/v3/applications/{PACKAGE_NAME}'
-TOKEN_FILE = pathlib.Path.home() / '.android_play_api'
 
 
 class UploadFailedException(Exception):
@@ -83,23 +83,25 @@ def _get_auth_header(token: str) -> dict:
     return {'Authorization': f'Bearer {token}'}
 
 
+P = ParamSpec('P')
+
+
 def retry_refresh_token():
     """
     """
 
-    def wrapper(func):
+    def wrapper(func: Callable[Concatenate[httpx.Client, P], httpx.Response]):
         @functools.wraps(func)
-        def wrapped(*args, **kwargs):
+        def wrapped(client: httpx.Client, *args: P.args, **kwargs: P.kwargs):
             for i in range(2):
-
-                resp = func(*args, **kwargs)
-                if resp.status_code == 401:
-                    session = args[0]
-                    token = refresh_token()
-                    session.headers.update(_get_auth_header(token))
+                resp = func(client, *args, **kwargs)
+                if resp.status_code == codes.UNAUTHORIZED:
+                    token = refresh_token(client)
+                    client.headers.update(_get_auth_header(token))
                 else:
                     break
-            return resp
+
+            raise NotImplementedError(f'Got no response')
 
         return wrapped
 
@@ -107,6 +109,9 @@ def retry_refresh_token():
 
 
 def _gen_jwt():
+    if not PRIVATE_KEY_FROM_JSON:
+        raise ValueError('PRIVATE_KEY_FROM_JSON must be set')
+
     iat = time.time()
     exp = iat + 3600
 
@@ -123,8 +128,8 @@ def _gen_jwt():
     return signed_jwt
 
 
-def fetch_access_token(signed_jwt: str) -> str:
-    resp = requests.post('https://oauth2.googleapis.com/token', data={
+def fetch_access_token(client: httpx.Client, signed_jwt: str) -> str:
+    resp = client.post('https://oauth2.googleapis.com/token', data={
         'grant_type': 'urn:ietf:params:oauth:grant-type:jwt-bearer',
         'assertion': signed_jwt
     })
@@ -132,158 +137,116 @@ def fetch_access_token(signed_jwt: str) -> str:
     return data['access_token']
 
 
-def refresh_token():
+def refresh_token(client: httpx.Client):
     logger.info('Refreshing token...')
     signed_jwt = _gen_jwt()
-    token = fetch_access_token(signed_jwt)
-    with open(str(TOKEN_FILE), 'w') as f:
-        f.write(token)
+    token = fetch_access_token(client, signed_jwt)
+    TOKEN_FILE.write_text(token)
     logger.info('Token refreshed !')
     return token
 
 
 @retry_refresh_token()
-def fetch_insert_edit(session, expiry=60 * 10):
+def fetch_insert_edit(client: httpx.Client, expiry=60 * 10):
     data = {
         'id': str(uuid4()),
         'expiryTimeSeconds': expiry
     }
-    resp = session.post(f'{URL}/edits', json=data)
+    resp = client.post(f'{URL}/edits', json=data)
     return resp
 
 
 @retry_refresh_token()
-def fetch_upload_bundle(session: requests.Session,
+def fetch_upload_bundle(session: httpx.Client,
                         edit_id: str,
-                        bundle_path: str):
+                        bundle_path: Path):
     resp = session.post(f"{UPLOAD_URL}/edits/{edit_id}/bundles",
                         params={'uploadType': 'media'},
                         headers={'Content-Type': 'application/octet-stream'},
-                        data=open(bundle_path, 'rb').read())
+                        content=bundle_path.read_bytes())
     return resp
 
 
 @retry_refresh_token()
-def fetch_patch_release(session: requests.Session, edit_id: str, release: Release):
-    resp = session.put(f'{URL}/edits/{edit_id}/tracks/{release.track.value}',
-                       json=release.data)
+def fetch_patch_release(client: httpx.Client, edit_id: str, release: Release):
+    resp = client.put(f'{URL}/edits/{edit_id}/tracks/{release.track.value}',
+                      json=release.data)
     return resp
 
 
 @retry_refresh_token()
-def fetch_commit(session: requests.Session, edit_id: str):
-    resp = session.post(f'{COMMIT_URL}/edits/{edit_id}:commit')
+def fetch_commit(client: httpx.Client, edit_id: str):
+    resp = client.post(f'{COMMIT_URL}/edits/{edit_id}:commit')
     return resp
 
 
-def upload_bundle(session: requests.Session, path: str,
-                  changelog: str,
-                  track: str,
-                  edit_id: str = None,
-                  no_upload: bool = False,
-                  **kwargs):
+def upload_bundle(client: httpx.Client,
+                  path: Path,
+                  changelog: Path,
+                  track: Tracks,
+                  edit_id: str | None = None,
+                  skip_upload: bool = False):
     releases = parse_markdown(changelog)
-    track = Tracks[track]
     last_release = releases[0]
 
     logger.info(f'Starting bundle upload edit (version: {last_release.version}), track: {track.value}')
 
     if not edit_id:
-        resp = fetch_insert_edit(session, 30)
+        resp = fetch_insert_edit(client, 30)
         resp = resp.json()
-        edit_id = resp['id']
-        logger.info('Edit created with id ', edit_id)
+        _edit_id = resp['id']
+        logger.info('Edit created with id ', _edit_id)
+    else:
+        _edit_id = edit_id
 
-    if not no_upload:
+    if not skip_upload:
         logger.info(f'Starting upload of {path} ...')
-        resp = fetch_upload_bundle(session, edit_id, path)
+        resp = fetch_upload_bundle(client, _edit_id, path)
         data = resp.json()
-        if resp.status_code != 200:
+        if resp.status_code != codes.OK:
             raise UploadFailedException(data['error']['message'], resp.status_code)
 
         logger.info('Uploaded version: {versionCode}'.format(**data))
 
     release = Release(track, last_release)
-    resp = fetch_patch_release(session, edit_id, release)
+    resp = fetch_patch_release(client, _edit_id, release)
     data = resp.json()
-    if resp.status_code != 200:
+    if resp.status_code != codes.OK:
         raise UploadFailedException(data['error']['message'], resp.status_code)
 
-    resp = fetch_commit(session, edit_id)
+    resp = fetch_commit(client, _edit_id)
     try:
         data = resp.json()
     except JSONDecodeError:
         logger.error(resp.text)
         raise
 
-    if resp.status_code != 200:
+    if resp.status_code != codes.OK:
         raise UploadFailedException(data['error']['message'], resp.status_code)
 
     logger.info(f'Release sent ! ({data})')
 
 
-def _load_config(package_name, config_path) -> Optional[str]:
+def _load_config(package_name: str, config_path: Path | None = None) -> str | None:
     global URL, PRIVATE_KEY_FROM_JSON, PRIVATE_KEY_ID_FROM_JSON, CLIENT_EMAIL, UPLOAD_URL, COMMIT_URL
     URL = URL.format(PACKAGE_NAME=package_name)
     UPLOAD_URL = UPLOAD_URL.format(PACKAGE_NAME=package_name)
     COMMIT_URL = COMMIT_URL.format(PACKAGE_NAME=package_name)
 
     if config_path:
-        with open(config_path, 'r') as f:
-            config = json.load(f)
+        config = json.loads(config_path.read_text())
         PRIVATE_KEY_FROM_JSON = config['private_key']
         PRIVATE_KEY_ID_FROM_JSON = config['private_key_id']
         CLIENT_EMAIL = config['client_email']
 
-    token = None
-
-    if TOKEN_FILE.exists():
-        with open(str(TOKEN_FILE), 'r') as f:
-            token = f.read()
+    token = TOKEN_FILE.read_text() if TOKEN_FILE.exists() else None
 
     return token
 
 
-def main(options: dict):
-    func = options.pop('func', None)
-    if not func:
-        logger.warn('Nothing to do')
-        return
-    token = _load_config(options.pop('package'),
-                         options.pop('config', None))
-
-    session = requests.Session()
+def init_token(client: httpx.Client,
+               package: str,
+               config: Path | None = None):
+    token = _load_config(package, config)
     if token:
-        session.headers.update(_get_auth_header(token))
-
-    try:
-        func(session=session, **options)
-    except UploadFailedException as e:
-        logger.error(f'Upload failed. {e.message} (code: {e.status_code})')
-        sys.exit(-1)
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser('Utility for Android play publisher API')
-    parser.add_argument('--package',
-                        help='Package Name (eg: com.myapp)',
-                        required=True)
-    parser.add_argument('--config', help='Path to the JSON config file')
-    parser.add_argument('-v', '--verbose', action='store_true')
-    subparsers = parser.add_subparsers()
-
-    upload_parser = subparsers.add_parser('upload')
-    upload_parser.add_argument('--edit-id', type=str, help="""
-    Edit ID for the upload, if not specified, a new one will be generated
-    """)
-    upload_parser.add_argument('-p', '--path', help='Path to the bundle to upload',
-                               required=True)
-    upload_parser.add_argument('--no-upload', action='store_true', help='Skips the bundle upload')
-    upload_parser.add_argument('--changelog', help='Path to the CHANGELOG file', required=True)
-    upload_parser.add_argument('--track', help='Track to upload to', choices=[x.value for x in Tracks],
-                               required=True)
-    upload_parser.set_defaults(func=upload_bundle)
-
-    options = parser.parse_args()
-    init_logging(log_lvl=logging.INFO if options.verbose else logging.WARNING)
-    main(vars(options))
+        client.headers.update(_get_auth_header(token))

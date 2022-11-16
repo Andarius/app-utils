@@ -1,7 +1,9 @@
-import argparse
-import cairosvg
-from pathlib import Path
+import logging
 from collections import namedtuple
+from pathlib import Path
+
+import cairosvg
+from piou import Option
 
 Sizes = namedtuple('Sizes', ['size', 'formats'])
 
@@ -11,18 +13,22 @@ _DEFAULT_SIZES = {
 }
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--folder', help='Folder containing svg icons to convert')
-parser.add_argument('-f', '--file', help='Svg icon to convert')
-parser.add_argument('-o', '--output', help='Folder where to write the output', required=True)
+def run_icons(
+        icons_folder: Path | None = Option(None, '--folder', help='Folder containing svg icons to convert'),
+        icon: Path | None = Option(None, '-f', '--file', help='Svg icon to convert'),
+        output_folder=Option(..., '-o', '--output', help='Folder where to write the output')
+):
+    files = []
+    if icons_folder:
+        files += list(icons_folder.glob('*.svg'))
+    if icon:
+        files = [icon]
 
-
-def main(options):
-    files = list(Path(options.folder).glob('*.svg')) if options.folder else [Path(options.file)]
-    output_path = Path(options.output)
+    if not files:
+        logging.error('Please specify either --folder or --file')
+        return
 
     for file in files:
-        print(file)
         for ext, _default_size in _DEFAULT_SIZES.items():
             for _format in _default_size.formats:
                 _file_ext = (f'@{_format}x' if _format > 1 else '') + ext
@@ -32,10 +38,4 @@ def main(options):
                 cairosvg.svg2png(url=str(file),
                                  output_height=output_size,
                                  output_width=output_size,
-                                 write_to=str(output_path / _output_file))
-
-
-if __name__ == "__main__":
-    from rich import print
-    args = parser.parse_args()
-    main(args)
+                                 write_to=str(output_folder / _output_file))

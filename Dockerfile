@@ -1,4 +1,4 @@
-FROM python:3.8-alpine
+FROM python:3.10-alpine
 
 RUN apk --no-cache add git gettext openssh libressl coreutils && \
     addgroup user && \
@@ -17,7 +17,7 @@ RUN  apk --no-cache add --virtual build-dependencies gcc make make musl-dev libf
 
 RUN mkdir /build /usr/host-bin && chown -R user:user /scripts /tmp /home/user
 
-ADD update_version.py .
+ADD app_utils/jobs/update_version.py .
 #ADD icons.py .
 #ADD crop.py .
 ADD app/* app/

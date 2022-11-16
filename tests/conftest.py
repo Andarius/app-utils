@@ -1,26 +1,13 @@
-from pathlib import Path
-import pytest
 import shutil
-import os
+from pathlib import Path
+
+import pytest
 
 DATA_FOLDER = Path(__file__).parent / 'data'
-TMP_FILES_FOLDER = Path(__file__).parent / 'tmp'
 
 
 @pytest.fixture(scope='function')
-def tmp_folder():
-    if TMP_FILES_FOLDER.exists():
-        shutil.rmtree(TMP_FILES_FOLDER)
-
-    TMP_FILES_FOLDER.mkdir()
-
-    yield TMP_FILES_FOLDER
-
-    shutil.rmtree(TMP_FILES_FOLDER)
-
-
-@pytest.fixture(scope='function')
-def project_path(tmp_folder):
-    path = tmp_folder / 'myApp'
+def project_path(tmp_path):
+    path = tmp_path / 'myApp'
     shutil.copytree(DATA_FOLDER / 'myApp', path)
     yield path

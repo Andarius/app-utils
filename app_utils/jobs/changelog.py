@@ -1,10 +1,10 @@
-import argparse
-from pathlib import Path
 import re
-from typing import Union, List
-from dataclasses import dataclass, asdict
-from .logs import logger
+from dataclasses import dataclass, asdict, field
+from pathlib import Path
 
+from piou import Option
+
+from app_utils.logs import logger
 
 _version_reg = re.compile(r'^##\s+\[v(?P<version>\d+\.\d+\.\d+)\]$')
 _lang_reg = re.compile(r'-\s+\*\*(?P<lang>\w{2}\-\w{2})\*\*:')
@@ -38,7 +38,7 @@ class ReleaseNote:
 @dataclass
 class Release:
     version: str
-    release_notes: List[Union[ReleaseNote, dict]]
+    release_notes: list[ReleaseNote] = field(default_factory=list)
 
     @property
     def version_code(self) -> int:
@@ -55,7 +55,7 @@ class Release:
                               for x in self.release_notes]
 
 
-def parse_markdown(path: Union[Path, str]) -> List[Release]:
+def parse_markdown(path: Path) -> list[Release]:
     file = path if isinstance(str, Path) else Path(path)
 
     def _reset_lang():
@@ -86,6 +86,8 @@ def parse_markdown(path: Union[Path, str]) -> List[Release]:
         if l.startswith('## '):
             _reset()
             version = _version_reg.match(l)
+            if version is None:
+                raise ValueError(f'No match found for line {l!r}')
             current_version['version'] = version.group('version')
             current_version['languages'] = []
 
@@ -118,33 +120,23 @@ def print_release_infos(release: Release):
         print('No release notes')
 
 
-def main(options):
-    releases = parse_markdown(options['path'])
-    if options['last']:
+def run_changelog(
+        path: Path = Option(..., '--path', '-p', help='Changelog path'),
+        show_last: bool = Option(False, '-l', '--last', help='Prints the last version'),
+        show_releases: bool = Option(False, '-a', '--all-releases', help='Prints all available releases'),
+        release_version: bool = Option(False, '-r', '--release', help='Release version')
+):
+    releases = parse_markdown(path)
+    if show_last:
         print_release_infos(releases[0])
-    elif options['all_releases']:
+    elif show_releases:
         for release in releases:
             print(release.version)
-    elif options['release']:
-        release = [x for x in releases if x.version == options['release']]
+    elif release_version:
+        release = [x for x in releases if x.version == release_version]
         if release:
             print_release_infos(release[0])
         else:
             print('[red]release not found[/red]')
     else:
         print('[red]Nothing to do[/red]')
-
-
-if __name__ == '__main__':
-    from rich import print
-    parser = argparse.ArgumentParser('Changelog parser')
-    parser.add_argument('-p', '--path',
-                        help='Changelog path',
-                        required=True)
-    parser.add_argument('-v', '--verbose', action='store_true')
-    parser.add_argument('-r', '--release', help='Will print the corresponding release infos')
-    parser.add_argument('-a', '--all-releases', action='store_true', help='Will print all available releases')
-    parser.add_argument('-l', '--last', action='store_true', help='Will print the last version')
-
-    options = parser.parse_args()
-    main(vars(options))

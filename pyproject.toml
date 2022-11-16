@@ -1,0 +1,41 @@
+[tool.poetry]
+name = "app-utils"
+version = "0.2.0"
+description = ""
+authors = ["Julien Brayere <julien.brayere@obitrain.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+piou = "^0.12.14"
+rich = "^12.6.0"
+cairosvg = "^2.5.2"
+httpx = "^0.23.0"
+pyjwt = {extras = ["crypto"], version = "^2.6.0"}
+
+[tool.poetry.dev-dependencies]
+pyright = "^1.1.244"
+pytest = "^7.1.2"
+pytest-cov = "^4.0.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+addopts = "--cov=api -s -q -x --no-cov-on-fail"
+testpaths = [
+    "tests"
+]
+python_files = "*.py"
+
+[tool.pyright]
+include = [
+    "app_utils", "run.py"
+]
+exclude = []
+
+pythonVersion = "3.10"
+pythonPlatform = "Linux"
+
+[tool.poetry.scripts]
+cli = 'run:run'
