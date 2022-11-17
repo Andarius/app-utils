@@ -2,17 +2,21 @@ version: 2.1
 
 orbs:
   gh: circleci/github-cli@1.0
-#  sre: tracktor/ci-tools@0.1.5
+  sre: tracktor/ci-tools@0.1.5
 
 references:
   deploy_context: &deploy_context
     - github
 
 executors:
+
   test-build:
     docker:
       - image: cimg/python:3.10-browsers
 
+  build-docker:
+    docker:
+      - image: cimg/base:current
 
 jobs:
 
@@ -71,27 +75,25 @@ jobs:
           paths:
             - dist/
 
-#  build-docker:
-#    executor: build-docker
-#    steps:
-#      - setup_remote_docker:
-#          version: 20.10.14
-##      - attach_workspace:
-##          at: .
-#      - sre/load-poetry-version
-#      - sre/build-docker:
-#          image_name: << parameters.image_name >>
-#          version: ${VERSION}
-#          latest_version: 'latest'
-#          registry_pwd: $CONTAINER_REGISTRY_PWD
-#          registry_user: $CONTAINER_REGISTRY_USER
-#          build_params: "--build-arg version=${VERSION}"
-#          publish: << parameters.publish >>
+  build-docker:
+    executor: build-docker
+    steps:
+      - setup_remote_docker:
+          version: 20.10.14
+      - sre/load-poetry-version
+      - sre/build-docker:
+          image_name: 'andarius/track-utils'
+          version: ${VERSION}
+          latest_version: 'latest'
+          registry_pwd: $DOCKER_PWD
+          registry_user: $DOCKER_USER
+          build_params: "--build-arg version=${VERSION}"
+          publish: true
 
 
 workflows:
 
-  run-tests:
+  tests-deploy:
     jobs:
       - run-tests:
           filters:
@@ -105,3 +107,11 @@ workflows:
               only: /.*/
             branches:
               only: /^master$/
+  publish:
+    jobs:
+      - build-docker:
+          filters:
+            tags:
+              only: /.*/
+            branches:
+              ignore: /.*/
