@@ -75,11 +75,21 @@ jobs:
           paths:
             - dist/
 
+  export-requirements:
+    executor: test-build
+    steps:
+      - checkout
+      - sre/export-poetry:
+          extras: '--without-hashes'
+
   build-docker:
     executor: build-docker
     steps:
       - setup_remote_docker:
           version: 20.10.14
+      - checkout
+      - sre/export-poetry:
+          extras: '--without-hashes'
       - sre/load-poetry-version
       - sre/build-docker:
           image_name: 'andarius/track-utils'
