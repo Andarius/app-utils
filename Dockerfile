@@ -1,12 +1,10 @@
 FROM python:3.10-alpine
 
-RUN apk --no-cache add git gettext openssh libressl coreutils && \
+RUN apk --no-cache add bash cairo && \
     addgroup user && \
-    adduser -s /bin/bash -D -G user user && \
-    cp /usr/bin/envsubst /usr/local/bin/envsubst && \
-    cp /usr/bin/tee /usr/local/bin/tee
+    adduser -s /bin/bash -D -G user user
 
-WORKDIR /scripts
+WORKDIR /app
 
 ADD requirements.txt .
 
@@ -15,20 +13,9 @@ RUN  apk --no-cache add --virtual build-dependencies gcc make make musl-dev libf
      apk del build-dependencies && \
      rm requirements.txt
 
-RUN mkdir /build /usr/host-bin && chown -R user:user /scripts /tmp /home/user
-
-ADD app_utils/jobs/update_version.py .
-#ADD icons.py .
-#ADD crop.py .
-ADD app/* app/
-ADD bin bin/
-
-WORKDIR /home/user
-
-ENV PATH "$PATH:/scripts/bin"
-#ENV BUILD_PATH="/home/user"
+ADD app_utils/ /app/app_utils
+ADD run.py /app
 
 USER user
 
-#ENTRYPOINT ["upload-android.sh"]
-#CMD ["android"]
+ENTRYPOINT ["python", "run.py"]
