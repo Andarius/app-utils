@@ -110,6 +110,7 @@ workflows:
   publish:
     jobs:
       - build-docker:
+          context: *deploy_context
           filters:
             tags:
               only: /.*/
