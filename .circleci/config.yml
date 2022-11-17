@@ -2,12 +2,17 @@ version: 2.1
 
 orbs:
   gh: circleci/github-cli@1.0
+#  sre: tracktor/ci-tools@0.1.5
 
+references:
+  deploy_context: &deploy_context
+    - github
 
 executors:
   test-build:
     docker:
       - image: cimg/python:3.10-browsers
+
 
 jobs:
 
@@ -66,6 +71,24 @@ jobs:
           paths:
             - dist/
 
+#  build-docker:
+#    executor: build-docker
+#    steps:
+#      - setup_remote_docker:
+#          version: 20.10.14
+##      - attach_workspace:
+##          at: .
+#      - sre/load-poetry-version
+#      - sre/build-docker:
+#          image_name: << parameters.image_name >>
+#          version: ${VERSION}
+#          latest_version: 'latest'
+#          registry_pwd: $CONTAINER_REGISTRY_PWD
+#          registry_user: $CONTAINER_REGISTRY_USER
+#          build_params: "--build-arg version=${VERSION}"
+#          publish: << parameters.publish >>
+
+
 workflows:
 
   run-tests:
@@ -76,6 +99,7 @@ workflows:
               ignore: /.*/
       - bump-version:
           requires: [ run-tests ]
+          context: *deploy_context
           filters:
             tags:
               only: /.*/
