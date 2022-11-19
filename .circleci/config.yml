@@ -67,8 +67,7 @@ jobs:
       - run:
           name: Create release
           command: bash .circleci/scripts/release.sh
-      - sre/export-poetry:
-          extras: '--without-hashes'
+
       - store_artifacts:
           path: dist
       - save_cache:
@@ -81,6 +80,8 @@ jobs:
     executor: test-build
     steps:
       - checkout
+      - sre/export-poetry:
+          extras: '--without-hashes'
 
   build-docker:
     executor: build-docker
@@ -119,8 +120,15 @@ workflows:
               only: /^master$/
   publish:
     jobs:
+      - export-requirements:
+        filters:
+            tags:
+              only: /.*/
+            branches:
+              ignore: /.*/
       - build-docker:
           context: *deploy_context
+          requires: [ export-requirements ]
           filters:
             tags:
               only: /.*/
