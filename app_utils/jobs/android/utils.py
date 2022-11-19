@@ -1,5 +1,4 @@
 import functools
-import json
 import time
 from dataclasses import dataclass
 from enum import Enum
@@ -227,14 +226,13 @@ def upload_bundle(client: httpx.Client,
     logger.info(f'Release sent ! ({data})')
 
 
-def _load_config(package_name: str, config_path: Path | None = None) -> str | None:
+def _load_config(package_name: str, config: dict | None = None) -> str | None:
     global URL, PRIVATE_KEY_FROM_JSON, PRIVATE_KEY_ID_FROM_JSON, CLIENT_EMAIL, UPLOAD_URL, COMMIT_URL
     URL = URL.format(PACKAGE_NAME=package_name)
     UPLOAD_URL = UPLOAD_URL.format(PACKAGE_NAME=package_name)
     COMMIT_URL = COMMIT_URL.format(PACKAGE_NAME=package_name)
 
-    if config_path:
-        config = json.loads(config_path.read_text())
+    if config:
         PRIVATE_KEY_FROM_JSON = config['private_key']
         PRIVATE_KEY_ID_FROM_JSON = config['private_key_id']
         CLIENT_EMAIL = config['client_email']
@@ -246,7 +244,7 @@ def _load_config(package_name: str, config_path: Path | None = None) -> str | No
 
 def init_token(client: httpx.Client,
                package: str,
-               config: Path | None = None):
+               config: dict | None = None):
     token = _load_config(package, config)
     if token:
         client.headers.update(_get_auth_header(token))
