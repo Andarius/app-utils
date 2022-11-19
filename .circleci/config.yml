@@ -61,7 +61,7 @@ jobs:
           name: Load VERSION
           command: echo 'export VERSION=$(git tag -l --sort=-creatordate | head -n 1)' >> $BASH_ENV
       - sre/build-docker:
-          image_name: 'andarius/track-utils'
+          image_name: 'andarius/app-utils'
           version: ${VERSION}
           latest_version: 'latest'
           registry_pwd: $DOCKER_PWD
