@@ -80,6 +80,11 @@ jobs:
     executor: test-build
     steps:
       - checkout
+      - run:
+          name: 'test'
+          command: |
+            VERSION=$(git tag -l --sort=-creatordate | head -n 1)
+            echo $VERSION
       - sre/export-poetry:
           extras: '--without-hashes'
 
@@ -127,6 +132,6 @@ workflows:
           branches:
             only: /^feat/CI$/
 #            ignore: /.*/
-      - build-docker:
-          context: *deploy_context
-          requires: [ export-requirements ]
+#      - build-docker:
+#          context: *deploy_context
+#          requires: [ export-requirements ]
