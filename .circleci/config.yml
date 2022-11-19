@@ -104,33 +104,29 @@ jobs:
 
 workflows:
 
-  tests-deploy:
-    jobs:
-      - run-tests:
-          filters:
-            tags:
-              ignore: /.*/
-      - bump-version:
-          requires: [ run-tests ]
-          context: *deploy_context
-          filters:
-            tags:
-              only: /.*/
-            branches:
-              only: /^master$/
+#  tests-deploy:
+#    jobs:
+#      - run-tests:
+#          filters:
+#            tags:
+#              ignore: /.*/
+#      - bump-version:
+#          requires: [ run-tests ]
+#          context: *deploy_context
+#          filters:
+#            tags:
+#              only: /.*/
+#            branches:
+#              only: /^master$/
   publish:
     jobs:
       - export-requirements:
         filters:
-            tags:
-              only: /.*/
-            branches:
-              ignore: /.*/
+#          tags:
+#            only: /.*/
+          branches:
+            only: /^feat/CI$/
+#            ignore: /.*/
       - build-docker:
           context: *deploy_context
           requires: [ export-requirements ]
-          filters:
-            tags:
-              only: /.*/
-            branches:
-              ignore: /.*/
