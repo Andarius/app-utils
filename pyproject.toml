@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "app-utils"
-version = "0.4.8"
+version = "0.4.9"
 description = ""
 authors = ["Julien Brayere <julien.brayere@obitrain.com>"]
 
@@ -20,7 +20,7 @@ pytest-cov = "^4.0.0"
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "0.4.8"
+version = "0.4.9"
 tag_format = "$version"
 version_files = [
     "pyproject.toml:version"
