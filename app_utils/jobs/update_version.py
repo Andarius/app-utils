@@ -72,7 +72,7 @@ def run_update_version(
                                  help='Changelog path'),
         project_path: Path = Option('/project', '--project',
                                     help='Path to the RN project'),
-        version_path: Path | None = Option(None, '--version', help='Path where to store the version built'),
+        version_path: str | None = Option(None, '--version', help='Path where to store the version built'),
 ):
     """
     Utility to update the version depending on the platform using the CHANGELOG.md file:
@@ -81,10 +81,12 @@ def run_update_version(
     """
 
     versions = parse_markdown(changelog)
+
+    _version_path = Path(version_path) if version_path else None
     match app_type:
         case 'android':
-            update_android_version(project_path, versions, version_path)
+            update_android_version(project_path, versions, _version_path)
         case 'ios':
-            update_ios_version(project_path, versions, version_path)
+            update_ios_version(project_path, versions, _version_path)
         case _:
             raise NotImplementedError(f'Got invalid app_type {app_type!r}')
