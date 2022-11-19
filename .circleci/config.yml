@@ -21,35 +21,11 @@ executors:
 jobs:
 
   run-tests:
+
     executor: test-build
     steps:
       - checkout
-      - restore_cache:
-          keys:
-            - deps-{{ checksum "poetry.lock" }}
-      - run:
-          name: Install python dependencies
-          command: poetry install
-      - save_cache:
-          key: deps-{{ checksum "poetry.lock" }}
-          paths:
-            - /home/circleci/.cache/pypoetry/virtualenvs
-      - run:
-          name: Running type checking
-          command: poetry run pyright
-      - run:
-          name: Run tests
-          command: |
-            poetry run pytest -vv --junitxml=tests/junit.xml
-      - run:
-          name: Generating coverage
-          command: |
-            poetry run coverage xml -o tests/coverage.xml
-            poetry run coverage html
-      - store_test_results:
-          path: tests
-      - store_artifacts:
-          path: htmlcov
+      - sre/run-python-tests
 
   bump-version:
     executor: test-build
@@ -67,7 +43,6 @@ jobs:
       - run:
           name: Create release
           command: bash .circleci/scripts/release.sh
-
       - store_artifacts:
           path: dist
       - save_cache:
@@ -76,27 +51,15 @@ jobs:
           paths:
             - dist/
 
-  export-requirements:
-    executor: test-build
-    steps:
-      - checkout
-      - run:
-          name: 'test'
-          command: |
-            VERSION=$(git tag -l --sort=-creatordate | head -n 1)
-            echo $VERSION
-      - sre/export-poetry:
-          extras: '--without-hashes'
-
   build-docker:
     executor: build-docker
     steps:
       - setup_remote_docker:
           version: 20.10.14
       - checkout
-      - attach_workspace:
-          at: .
-      - sre/load-poetry-version
+      - run:
+          name: Load VERSION
+          command: echo 'export VERSION=$(git tag -l --sort=-creatordate | head -n 1)' >> $BASH_ENV
       - sre/build-docker:
           image_name: 'andarius/track-utils'
           version: ${VERSION}
@@ -109,29 +72,27 @@ jobs:
 
 workflows:
 
-#  tests-deploy:
-#    jobs:
-#      - run-tests:
-#          filters:
-#            tags:
-#              ignore: /.*/
-#      - bump-version:
-#          requires: [ run-tests ]
-#          context: *deploy_context
-#          filters:
-#            tags:
-#              only: /.*/
-#            branches:
-#              only: /^master$/
+  tests-bump:
+    jobs:
+      - run-tests:
+          filters:
+            tags:
+              ignore: /.*/
+      - bump-version:
+          requires: [ run-tests ]
+          context: *deploy_context
+          filters:
+            tags:
+              only: /.*/
+            branches:
+              only: /^master$/
+
   publish:
     jobs:
-      - export-requirements:
-        filters:
-#          tags:
-#            only: /.*/
-          branches:
-            only: /^feat/CI$/
-#            ignore: /.*/
-#      - build-docker:
-#          context: *deploy_context
-#          requires: [ export-requirements ]
+      - build-docker:
+          context: *deploy_context
+          filters:
+            tags:
+              only: /.*/
+            branches:
+              ignore: /.*/
