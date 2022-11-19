@@ -26,6 +26,9 @@ jobs:
     steps:
       - checkout
       - sre/run-python-tests
+      - run:
+          name: Run command line
+          command: poetry run coverage run -a -m app_utils -h
 
   bump-version:
     executor: test-build
