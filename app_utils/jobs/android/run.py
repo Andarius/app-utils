@@ -5,7 +5,7 @@ import httpx
 from piou import CommandGroup, Option
 
 from app_utils.logs import logger
-from .utils import upload_bundle, Tracks, UploadFailedException, init_token
+from .utils import upload_bundle, Track, UploadFailedException, init_token
 
 android = CommandGroup('android')
 
@@ -20,7 +20,7 @@ def run_upload(
         bundle_path: Path = Option(..., '-p', '--path', help='Path to the bundle to upload'),
         skip_upload: bool = Option(False, '--no-upload', help='Skips the bundle upload'),
         changelog_path: Path = Option(..., '--changelog', help='Path to the CHANGELOG file'),
-        track: Tracks = Option(..., '--track', help='Track to upload to')
+        track: Track = Option(..., '--track', help='Track to upload to')
 ):
     with httpx.Client() as client:
         init_token(client, package_name, config)

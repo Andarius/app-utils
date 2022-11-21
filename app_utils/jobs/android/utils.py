@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from enum import Enum
 from json import JSONDecodeError
 from pathlib import Path
-from typing import Callable, ParamSpec, Concatenate
+from typing import Callable, ParamSpec, Concatenate, Literal
 from uuid import uuid4
 
 import httpx
@@ -34,11 +34,7 @@ class UploadFailedException(Exception):
         self.status_code = status_code
 
 
-class Tracks(Enum):
-    alpha = 'alpha'
-    beta = 'beta'
-    internal = 'internal'
-    production = 'production'
+Track = Literal['alpha', 'beta', 'internal', 'production']
 
 
 class Status(Enum):
@@ -51,7 +47,7 @@ class Status(Enum):
 
 @dataclass
 class Release:
-    track: Tracks
+    track: Track
     release: _Release
     status: Status = Status.completed
 
@@ -62,9 +58,9 @@ class Release:
                 'France'
             ],
             "includeRestOfWorld": False
-        } if self.track != self.track.internal else None
+        } if self.track != 'internal' else None
         data = {
-            "track": self.track.value,
+            "track": self.track,
             "releases": [
                 {
                     # "name": VERSION_NAME,
@@ -169,7 +165,7 @@ def fetch_upload_bundle(session: httpx.Client,
 
 @retry_refresh_token()
 def fetch_patch_release(client: httpx.Client, edit_id: str, release: Release):
-    resp = client.put(f'{URL}/edits/{edit_id}/tracks/{release.track.value}',
+    resp = client.put(f'{URL}/edits/{edit_id}/tracks/{release.track}',
                       json=release.data)
     return resp
 
@@ -183,13 +179,13 @@ def fetch_commit(client: httpx.Client, edit_id: str):
 def upload_bundle(client: httpx.Client,
                   path: Path,
                   changelog: Path,
-                  track: Tracks,
+                  track: Track,
                   edit_id: str | None = None,
                   skip_upload: bool = False):
     releases = parse_markdown(changelog)
     last_release = releases[0]
 
-    logger.info(f'Starting bundle upload edit (version: {last_release.version}), track: {track.value}')
+    logger.info(f'Starting bundle upload edit (version: {last_release.version}), track: {track}')
 
     if not edit_id:
         resp = fetch_insert_edit(client, 30)
