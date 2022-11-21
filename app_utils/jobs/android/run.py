@@ -7,10 +7,10 @@ from piou import CommandGroup, Option
 from app_utils.logs import logger
 from .utils import upload_bundle, Track, UploadFailedException, init_token
 
-android = CommandGroup('android')
+android_group = CommandGroup('android')
 
 
-@android.command('upload')
+@android_group.command('upload')
 def run_upload(
         package_name: str = Option(..., '--package',
                                    help='Package Name (eg: com.myapp)'),
@@ -20,9 +20,10 @@ def run_upload(
         bundle_path: Path = Option(..., '-p', '--path', help='Path to the bundle to upload'),
         skip_upload: bool = Option(False, '--no-upload', help='Skips the bundle upload'),
         changelog_path: Path = Option(..., '--changelog', help='Path to the CHANGELOG file'),
-        track: Track = Option(..., '--track', help='Track to upload to')
+        track: Track = Option(..., '--track', help='Track to upload to'),
+        timeout: int = Option(60, '--timeout', help='Fetch timeout')
 ):
-    with httpx.Client() as client:
+    with httpx.Client(timeout=timeout) as client:
         init_token(client, package_name, config)
         try:
             upload_bundle(client, path=bundle_path,

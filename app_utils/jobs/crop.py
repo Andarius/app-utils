@@ -16,7 +16,7 @@ def crop_image(input_path: str, output_path: str, crop_dim: str):
 def run_crop(
         folder: Path = Option(..., '-f', '--folder', help='Path of the folder containing the images to crop'),
         output_folder: Path = Option(..., '-o', '--output', help='Path where the crop images will be '),
-        extensions: list[str] = Option(['png', 'jpg'], '--extensions', help='Extension file to look for'),
+        extensions: list[str] = Option(['png', 'jpg', 'jpeg'], '--extensions', help='Extension file to look for'),
         image_dim: str = Option(..., '--dim', help='Images dimensions of the form WxH'),
         from_top: int = Option(0, '-t', '--top', help='Crop from the top'),
         from_bottom: int = Option(0, '-b', '--bottom', help='Crop from the top'),

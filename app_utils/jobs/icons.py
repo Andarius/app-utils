@@ -1,8 +1,10 @@
 import logging
 from collections import namedtuple
 from pathlib import Path
-from app_utils.logs import logger
+
 from piou import Option
+
+from app_utils.logs import logger
 
 Sizes = namedtuple('Sizes', ['size', 'formats'])
 
@@ -36,7 +38,7 @@ def run_icons(
                 _file_ext = (f'@{_format}x' if _format > 1 else '') + ext
                 _output_file = file.name.replace(file.suffix, '') + _file_ext + '.png'
                 output_size = _default_size.size * _format
-                print(f'\tsize: {output_size:<4} | ext: {_file_ext}')
+                logger.info(f'\tsize: {output_size:<4} | ext: {_file_ext}')
                 svg2png(url=str(file),
                         output_height=output_size,
                         output_width=output_size,

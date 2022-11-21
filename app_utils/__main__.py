@@ -4,7 +4,7 @@ from piou import Cli
 
 from app_utils.jobs import (
     run_changelog, run_crop, run_update_version, run_icons,
-    android
+    android_group
 )
 from app_utils.logs import init_logging, logger
 
@@ -17,7 +17,7 @@ cli.add_command('changelog', run_changelog)
 cli.add_command('crop', run_crop)
 cli.add_command('update-version', run_update_version)
 cli.add_command('resize-icons', run_icons)
-cli.add_command_group(android)
+cli.add_command_group(android_group)
 
 
 def on_process(verbose: bool = False, verbose2: bool = False):

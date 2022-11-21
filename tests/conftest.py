@@ -11,3 +11,7 @@ def project_path(tmp_path):
     path = tmp_path / 'myApp'
     shutil.copytree(DATA_FOLDER / 'myApp', path)
     yield path
+
+@pytest.fixture
+def static_folder():
+    return DATA_FOLDER

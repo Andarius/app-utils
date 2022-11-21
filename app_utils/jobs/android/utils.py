@@ -96,8 +96,10 @@ def retry_refresh_token():
                     client.headers.update(_get_auth_header(token))
                 else:
                     break
+            else:
+                raise NotImplementedError(f'Got no response')
 
-            raise NotImplementedError(f'Got no response')
+            return resp
 
         return wrapped
 
@@ -143,7 +145,10 @@ def refresh_token(client: httpx.Client):
 
 
 @retry_refresh_token()
-def fetch_insert_edit(client: httpx.Client, expiry=60 * 10):
+def fetch_insert_edit(client: httpx.Client, expiry: int = 60 * 10):
+    """
+    See https://developers.google.com/android-publisher/api-ref/rest/v3/edits#AppEdit
+    """
     data = {
         'id': str(uuid4()),
         'expiryTimeSeconds': expiry
@@ -191,12 +196,12 @@ def upload_bundle(client: httpx.Client,
         resp = fetch_insert_edit(client, 30)
         resp = resp.json()
         _edit_id = resp['id']
-        logger.info('Edit created with id ', _edit_id)
+        logger.info(f'Edit created with id {_edit_id!r}')
     else:
         _edit_id = edit_id
 
     if not skip_upload:
-        logger.info(f'Starting upload of {path} ...')
+        logger.info(f'Starting upload of {path!r} ...')
         resp = fetch_upload_bundle(client, _edit_id, path)
         data = resp.json()
         if resp.status_code != codes.OK:
