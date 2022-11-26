@@ -4,19 +4,16 @@ from typing import Literal
 
 from piou import Option
 
-from app_utils.jobs.changelog import parse_markdown, Release
+from app_utils.jobs.changelog import parse_markdown
 from app_utils.logs import logger
 
 
-def update_android_version(project: Path,
-                           versions: list[Release],
-                           output_version: Path | None = None):
+def update_android_version(project: Path, version: str):
     build_file = project / 'android' / 'app' / 'build.gradle'
 
-    last_version = versions[0].version
-    logger.info(f'Last version found: {last_version}')
+    logger.info(f'Last version found: {version}')
 
-    _major, _minor, _patch = last_version.split('.')
+    _major, _minor, _patch = version.split('.')
     text = build_file.read_text()
     replacements = [
         ('ext.versionMajor', _major),
@@ -28,11 +25,7 @@ def update_android_version(project: Path,
         text = re.sub(rf'{re.escape(_to_replace)} = \d+', f'{_to_replace} = {_version}', text)
 
     build_file.write_text(text)
-
     logger.info(f'Build file updated @{build_file}')
-    if output_version:
-        logger.info(f'Creating version file @{output_version}')
-        output_version.write_text(last_version)
 
 
 _MARKET_VERSION_REG = re.compile(r'(MARKETING_VERSION) = \d+\.\d+(\.\d+)?;')
@@ -40,14 +33,12 @@ _CURRENT_PROJECT_VERSION_REG = re.compile(r'(CURRENT_PROJECT_VERSION) = \d+;')
 
 
 def update_ios_version(project: Path,
-                       releases: list[Release],
-                       project_name: str,
-                       output_version: Path | None = None):
+                       version: str,
+                       version_code: int,
+                       project_name: str):
     pbxproj_path = project / 'ios' / f'{project_name}.xcodeproj' / 'project.pbxproj'
-    last_release = releases[0]
-    logger.info(f'Last version found: {last_release.version}')
 
-    _major, _minor, _patch = last_release.version.split('.')
+    _major, _minor, _patch = version.split('.')
     text = pbxproj_path.read_text()
 
     if not _MARKET_VERSION_REG.findall(text):
@@ -56,13 +47,10 @@ def update_ios_version(project: Path,
 
     if not _CURRENT_PROJECT_VERSION_REG.findall(text):
         raise NotImplementedError(f'Could not find CURRENT_PROJECT_VERSION in {pbxproj_path!r}')
-    text = _CURRENT_PROJECT_VERSION_REG.sub(fr'\1 = {last_release.version_code};', text)
+    text = _CURRENT_PROJECT_VERSION_REG.sub(fr'\1 = {version_code};', text)
 
     pbxproj_path.write_text(text)
     logger.info(f'Project.pbxproj updated @{pbxproj_path}')
-    if output_version:
-        logger.info(f'Creating version file @{output_version}')
-        output_version.write_text(last_release.version)
 
 
 AppType = Literal['ios', 'android']
@@ -84,18 +72,25 @@ def run_update_version(
      - **iOS**: updates the MARKETING_VERSION and CURRENT_PROJECT_VERSION *ios/app.xcodeproj/project.pbxproj*
     """
 
-    versions = parse_markdown(changelog)
+    releases = parse_markdown(changelog)
 
-    _version_path = Path(version_path) if version_path else None
+    output_version = Path(version_path) if version_path else None
+
+    last_release = releases[0]
+    last_version = last_release.version
     match app_type:
         case 'android':
-            update_android_version(project_path, versions, _version_path)
+            update_android_version(project_path, version=last_version)
         case 'ios':
             if project_name is None:
                 logger.error('Please specify a project name (--name)')
                 return
-            update_ios_version(project_path, versions,
-                               output_version=_version_path,
+            update_ios_version(project_path, version=last_release.version,
+                               version_code=last_release.version_code,
                                project_name=project_name)
         case _:
             raise NotImplementedError(f'Got invalid app_type {app_type!r}')
+
+    if output_version:
+        logger.info(f'Creating version file @{output_version} ({last_version})')
+        output_version.write_text(last_version)
