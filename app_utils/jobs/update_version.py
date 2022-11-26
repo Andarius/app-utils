@@ -1,4 +1,5 @@
 import re
+import sys
 from pathlib import Path
 from typing import Literal
 
@@ -84,7 +85,7 @@ def run_update_version(
         case 'ios':
             if project_name is None:
                 logger.error('Please specify a project name (--name)')
-                return
+                sys.exit(1)
             update_ios_version(project_path, version=last_release.version,
                                version_code=last_release.version_code,
                                project_name=project_name)
