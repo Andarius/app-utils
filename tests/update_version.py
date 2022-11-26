@@ -30,7 +30,8 @@ def test_update_version_ios(tmp_path, project_path):
         app_type='ios',
         changelog=DATA_FOLDER / 'CHANGELOG.md',
         project_path=project_path,
-        version_path=tmp_path / 'version',
+        version_path=str(tmp_path / 'version'),
+        project_name='myApp'
     )
 
     with open(project_path / 'ios' / 'myApp.xcodeproj' / 'project.pbxproj', 'r') as f:

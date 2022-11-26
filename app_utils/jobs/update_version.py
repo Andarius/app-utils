@@ -8,7 +8,8 @@ from app_utils.jobs.changelog import parse_markdown, Release
 from app_utils.logs import logger
 
 
-def update_android_version(project: Path, versions: list[Release],
+def update_android_version(project: Path,
+                           versions: list[Release],
                            output_version: Path | None = None):
     build_file = project / 'android' / 'app' / 'build.gradle'
 
@@ -40,8 +41,9 @@ _CURRENT_PROJECT_VERSION_REG = re.compile(r'(CURRENT_PROJECT_VERSION) = \d+;')
 
 def update_ios_version(project: Path,
                        releases: list[Release],
+                       project_name: str,
                        output_version: Path | None = None):
-    pbxproj_path = project / 'ios' / f'{project.name}.xcodeproj' / 'project.pbxproj'
+    pbxproj_path = project / 'ios' / f'{project_name}.xcodeproj' / 'project.pbxproj'
     last_release = releases[0]
     logger.info(f'Last version found: {last_release.version}')
 
@@ -72,6 +74,8 @@ def run_update_version(
                                  help='Changelog path'),
         project_path: Path = Option('/project', '--project',
                                     help='Path to the RN project'),
+        project_name: str | None = Option(None, '--name',
+                                          help='Project name (iOS only)'),
         version_path: str | None = Option(None, '--version', help='Path where to store the version built'),
 ):
     """
@@ -87,6 +91,11 @@ def run_update_version(
         case 'android':
             update_android_version(project_path, versions, _version_path)
         case 'ios':
-            update_ios_version(project_path, versions, _version_path)
+            if project_name is None:
+                logger.error('Please specify a project name (--name)')
+                return
+            update_ios_version(project_path, versions,
+                               output_version=_version_path,
+                               project_name=project_name)
         case _:
             raise NotImplementedError(f'Got invalid app_type {app_type!r}')
